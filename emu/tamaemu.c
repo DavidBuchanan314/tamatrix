@@ -113,6 +113,10 @@ unsigned char **loadRoms(char *dir) {
 				fseek(f, 0, SEEK_SET);
 			}
 			l=fread(roms[i], 1, 32768, f);
+			if (l != 32768) {
+				printf("ROM size mismatch\n");
+				exit(-1);
+			}
 //			printf("ROM loaded: %s - %d bytes\n", fname, l);
 //			printf("%x %x\n", roms[i][0x3ffc], roms[i][0x3ffd]);
 			fclose(f);
@@ -518,7 +522,7 @@ byte Loop6502(register M6502 *R) {
 
 void tamaDeinit(Tamagotchi *tama) {
 	//ToDo: do more here
-	i2ceepromDeinit(tama->i2ceeprom);
+	//i2ceepromDeinit(tama->i2ceeprom);
 }
 
 Tamagotchi *tamaInit(unsigned char **rom, char *eepromFile) {
@@ -545,7 +549,6 @@ Tamagotchi *tamaInit(unsigned char **rom, char *eepromFile) {
 }
 
 void tamaRun(Tamagotchi *tama, int cycles) {
-	int i;
 	while (cycles>0) cycles-=tamaHwTick(tama, 128);
 }
 
