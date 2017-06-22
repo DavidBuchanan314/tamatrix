@@ -22,6 +22,7 @@
 #include "lcd.h"
 #include "benevolentai.h"
 #include "udp.h"
+#include "spu.h"
 
 Tamagotchi *tama;
 int needRestart=0;
@@ -58,7 +59,7 @@ int getKey() {
 }
 
 
-#define FPS 15
+#define FPS (15)
 
 int main(int argc, char **argv) {
 	unsigned char **rom;
@@ -110,17 +111,18 @@ int main(int argc, char **argv) {
 	tama=tamaInit(rom, eeprom);
 	benevolentAiInit();
 	udpInit(host);
+	if(spuInit()) exit(-1); // maybe not the bes place to put this
 	while(1) {
 		clock_gettime(CLOCK_MONOTONIC, &tstart);
 		tamaRun(tama, FCPU/FPS-1);
-		lcdRender(tama->dram, tama->lcd.sizex, tama->lcd.sizey, &display);
+		lcdRender((uint8_t *) tama->dram, tama->lcd.sizex, tama->lcd.sizey, &display);
 		udpTick();
 		if (aiEnabled) {
 			k=benevolentAiRun(&display, 1000/FPS);
 		} else {
 			k=0;
 		}
-		if (!speedup || (t&15)==0) {
+		if (1 || (t&0xF)==0) {
 			lcdShow(&display);
 			udpSendDisplay(&display);
 			tamaDumpHw(tama->cpu);
@@ -128,7 +130,7 @@ int main(int argc, char **argv) {
 		}
 		if ((k&8)) {
 			//If anything interesting happens, make a LCD dump.
-			lcdDump(tama->dram, tama->lcd.sizex, tama->lcd.sizey, "lcddump.lcd");
+			lcdDump((uint8_t *) tama->dram, tama->lcd.sizex, tama->lcd.sizey, "lcddump.lcd");
 			if (stopDisplay) {
 				tama->cpu->Trace=1;
 				speedup=0;

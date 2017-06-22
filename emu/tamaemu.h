@@ -162,9 +162,15 @@ typedef struct {
 	int btnReleaseTm;
 	int btnReads;
 	int irnx;
+	int audioFrames;
+	int t0h;
+	int t0l;
+	FILE * faud;
+	char audlatch;
 } Tamagotchi;
 
 
+void tamaDumpHw(M6502 *cpu);
 unsigned char **loadRoms(char *dir);
 void freeRoms(unsigned char **roms);
 Tamagotchi *tamaInit(unsigned char **rom, char *eepromFile);

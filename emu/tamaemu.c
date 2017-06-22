@@ -329,13 +329,31 @@ void ioWrite(M6502 *cpu, register word addr, register byte val) {
 //	} else if (addr==0x3055) {
 //		cpu->Trace=1;
 //		printf("wuctl unimplemented ioWr 0x%04X 0x%02X\n", addr, val);
+	} else if (addr==R_SOFTCTL) {
+		if (val & 1<<7) {
+			q_append(t->audlatch);
+		} else {
+			q_append(t->ioreg[0x60]);
+		}
+	} else if (addr==R_DAC1H) {
+		if (!(t->ioreg[0x64] & 1<<7)) {
+			q_append(val);
+		}
 	} else {
 		if (!implemented[addr&0xff] && t->bkUnk) {
 			printf("unimplemented ioWr 0x%04X 0x%02X\n", addr, val);
 			cpu->Trace=1;
 		}
 	}
-	t->ioreg[addr-0x3000]=val;
+	if (addr == 0x3033) {
+		//fprintf(stderr, "TIM0HI: %02X\n", val);
+		t->t0h = val;
+	}
+	if (addr == 0x3032) {
+		//fprintf(stderr, "TIM0LO: %02X\n", val);
+		t->t0l = val;
+	}
+	t->ioreg[(addr-0x3000)&0xFF]=val;
 }
 
 
@@ -346,6 +364,18 @@ int tamaHwTick(Tamagotchi *t, int gran) {
 	int t0Tick=0, t1Tick=0;
 	int nmiTrigger=0;
 	int ien;
+
+	// Output audio
+	cpu_offset += gran;
+	/*t->audioFrames+=gran;
+	if (t->audioFrames >= 363) {
+		t->audioFrames -= 363;
+		if (REG(R_SOFTCTL) & 1<<7) {
+			fputc(t->audlatch, t->faud);
+		} else {
+			fputc(REG(R_DAC1H), t->faud);
+		}
+	}*/
 
 	//Do IR ticks
 	if (irTick(gran, &t->irnx)) t->hw.portAdata&=~0xf0; else t->hw.portAdata|=0xf0;
@@ -406,6 +436,12 @@ int tamaHwTick(Tamagotchi *t, int gran) {
 			if (REG(R_TM0HI)==0) {
 				hw->iflags|=(1<<7);
 				if (((REG(R_TIMCTL))&3)==3) t1Tick++;
+				t->audlatch = REG(R_DAC1H);
+				if (REG(R_SOFTCTL) & 1<<7) {
+					q_append(t->audlatch);
+				}
+				REG(R_TM0LO) = t->t0l;
+				REG(R_TM0HI) = t->t0h;
 				tamaWakeSrc(t, (1<<2));
 			}
 		}
@@ -469,9 +505,13 @@ int tamaHwTick(Tamagotchi *t, int gran) {
 		tamaWakeSrc(t, 1<<0);
 	}
 
+	//printf("gran %d, rem %d, div %d\n", gran, hw->remCpuCycles, clk->cpuDiv);
 	//Now would be a good time to run the cpu, if needed.
 	if (hw->remCpuCycles>0) {
+		//cpudiv = clk->cpuDiv;
 		hw->remCpuCycles=Exec6502(t->cpu, hw->remCpuCycles);
+	//} else {
+	//	cpu_offset += gran;
 	}
 	return gran;
 }
@@ -544,12 +584,15 @@ Tamagotchi *tamaInit(unsigned char **rom, char *eepromFile) {
 	Reset6502(tama->cpu);
 	tama->ioreg[R_CLKCTL-0x3000]=0x2; //Fosc/8 is default
 	tama->irnx=0;
+	tama->audioFrames=0;
+	tama->faud=fopen("out.pcm", "w");
+	tama->audlatch=0;
 	tamaClkRecalc(tama);
 	return tama;
 }
 
 void tamaRun(Tamagotchi *tama, int cycles) {
-	while (cycles>0) cycles-=tamaHwTick(tama, 128);
+	while (cycles>0) cycles-=tamaHwTick(tama, 16);
 }
 
 

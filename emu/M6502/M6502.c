@@ -17,6 +17,7 @@
 #include "M6502.h"
 #include "Tables.h"
 #include <stdio.h>
+#include "../spu.h" // eww...
 
 /** INLINE ***************************************************/
 /** C99 standard has "inline", but older compilers used     **/
@@ -226,6 +227,7 @@ int Exec6502(M6502 *R,int RunCycles)
 
     I=R->Rd6502(R, R->PC.W++);
     RunCycles-=Cycles[I];
+    //cpu_offset+=Cycles[I]*cpudiv;
     switch(I)
     {
 #include "Codes.h"
