@@ -9,10 +9,10 @@
 
 static void write_callback(struct SoundIoOutStream *outstream, int frame_count_min, int frame_count_max) {
 	const struct SoundIoChannelLayout *layout = &outstream->layout;
-	float float_sample_rate = outstream->sample_rate;
+	//float float_sample_rate = outstream->sample_rate;
 	//float seconds_per_frame = 1.0f / float_sample_rate;
 	struct SoundIoChannelArea *areas;
-	int frames_left = cpu_offset / (16000000/48000);//frame_count_max;
+	int frames_left = cpu_offset / (16000000/outstream->sample_rate);//frame_count_max;
 	int err;
 	//fprintf(stderr, "fmax %d\n", frame_count_max);
 	
