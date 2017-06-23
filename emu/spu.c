@@ -12,11 +12,13 @@ static void write_callback(struct SoundIoOutStream *outstream, int frame_count_m
 	//float float_sample_rate = outstream->sample_rate;
 	//float seconds_per_frame = 1.0f / float_sample_rate;
 	struct SoundIoChannelArea *areas;
-	int frames_left = cpu_offset / (16000000/outstream->sample_rate);//frame_count_max;
+	int frames_total = cpu_offset / (16000000/outstream->sample_rate);//frame_count_max;
+	int frames_left = frames_total;
 	int err;
 	//fprintf(stderr, "fmax %d\n", frame_count_max);
 	
 	//if (cpu_offset == 0) return;
+	int q_ptr = 0;
 
 	while (frames_left > 0) {
 		int frame_count = frames_left;
@@ -30,11 +32,10 @@ static void write_callback(struct SoundIoOutStream *outstream, int frame_count_m
 			break;
 
 		//printf("fcount %d\n", frame_count);
-		int q_ptr = 0;
 		//fprintf(stderr, "cpuo %d\n", cpu_offset);
 		//fprintf(stderr, "sr %f\n", float_sample_rate);
 		for (int frame = 0; frame < frame_count; frame++) {
-			while (q_ptr < q_idx && (float) offset_q[q_ptr] / cpu_offset < (float )frame/frames_left) {
+			while (q_ptr < q_idx && (float) offset_q[q_ptr] / cpu_offset < (float )(frames_total-frames_left+frame)/frames_total) {
 				out_state = value_q[q_ptr++];
 			}
 			for (int channel = 0; channel < layout->channel_count; channel++) {
